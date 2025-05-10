@@ -150,10 +150,104 @@ HTML의 콘텐츠에 데이터를 출력할 때는 다음과 같이 `th:text`를
 * No-Operation: `_`인 경우 마치 타임리프가 실행되지 않은 것 처럼 동작한다. 이것을 잘 사용하면 HTML의 내용 그대로 활용할 수 있다.
 
 ## 속성 값 설정
+타임리프는 주로 HTML 태그에 `th:*` 속성을 지정하는 방식으로 동작한다.
+`th:*`로 속성을 적용하면 기존 속성을 대체한다. 기존 속성이 없으면 새로 만든다.
+
 ## 반복
+타임리프에서 반복은 `th:each`를 사용한다. 추가로 반복에서 사용할 수 있는 여러 상태 값을 지원한다.
+
+#### 반복기능
+`<tr th:each="user : ${users}">`
+* 반복시 오른쪽 컬렉션(`${users}`)의 값을 하나씩 꺼내서 왼쪽 변수(`user`)에 담아서 태그를 반복 실행합니다.
+* `th:each`는 `List` 뿐만 아니라 배열, `java.util.Iterable`, `java.util.Enumeration`을 구현한 모든 객체를 반복에서 사용할 수 있다. `map`에서도 사용할수 있는데 이 경우 변수에 담기는 값은 `Map.Entry`이다.
+
+#### 반복 상태 유지
+`<tr th:each="user, userStat : ${users}">`
+반복의 두번째 파라미터를 설정해서 반복의 상태를 확인할 수 있다.
+두번째 파라미터는 생략 가능한데, 생략하면 지정한 변수명(`user`) + `Stat`이 된다.
+
+#### 반복 상태 유지 기능
+* `index`: 0부터 시작하는 값
+* `count`: 1부터 시작하는 값
+* `size`: 전체 사이즈
+* `even`, `odd`: 홀수, 짝수 여부(`boolean`)
+* `first`, `last`: 처음, 마지막 여부(`boolean`)
+* `current`: 현재 객체
+
 ## 조건부 평가
+타임리프의 조건식 `if`, `unless`
+
+#### if, unless
+타임리프는 해당 조건이 맞지 않으면 태그 자체를 렌더링하지 않는다.
+
+#### switch
+`*`은 만족하는 조건이 없을 때 사용하는 디폴트이다.
+
 ## 주석
+1. 표준 HTML 주석
+   * 자바스크립트의 표준 HTML 주석은 타임리프가 렌더링 하지 않고, 그대로 남겨둔다.
+2. 타임리프 파서 주석
+   * 타임리프 파서 주석은 타임리프의 진짜 주석이다. 렌더링에서 주석 부분을 제거한다.
+3. 타임리프 프로토타입 주석
+   * HTML 파일을 웹 브라우저에서 열면 HTML 주석이기 때문에 렌더링 하지 않는다.
+   * 타임리프 렌더링을 거치면 이 부분이 정상 렌더링 된다.
+
 ## 블록
+`<th:block>`은 HTML 태그가 아닌 타임리프의 유일한 자체 태그다.
+
 ## 자바스크립트 인라인
+타임리프는 자바스크립트에서 타임리프를 편리하게 사용할 수 있는 자바스크립트 인라인 기능을 제공한다.
+자바스크립트 인라인 기능은 다음과 같이 적용하면 된다.
+`<script th:inline="javascript>`
+
+#### 텍스트 렌더링
+* `const username = [[${user.username}]];`
+  * 인라인 사용 전 -> `const username = userA;`
+  * 인라인 사용 후 -> `const username = "userA";`
+
+#### 자바스크립트 내추럴 템플릿
+타임리프는 HTML 파일을 직접 열어도 동작하는 내추럴 템플릿 기능을 제공한다.
+자바스크립트 인라인 기능을 사용하면 주석을 활용해서 이 기능을 사용할 수 있다.
+* `const username2 = /*[[${user.username}]]*/ "test username";`
+  * 인라인 사용 전 -> `const username2 = /*userA*/ "test username";`
+  * 인라인 사용 후 -> `const username2 = "userA";`
+인라인 사용후 결과를 보면 주석 부분이 제거되고 기대한 "userA"가 정확하게 적용된다.
+
+#### 객체
+타임리프의 자바스크립트 인라인 기능을 사용하면 객체를 JSON으로 자동 변환 해준다.
+* `const user = [[${user}]];`
+  * 인라인 사용 전 -> `const user = BasicController.User(username=userA, age=10);`
+  * 인라인 사용 후 -> `const user = {"username":"userA", "age":10};`
+인라인 사용 전은 객체의 `toString()`이 호출된 값이다.
+인라인 사용 후는 객체를 JSON으로 변환해준다.
+
+#### 인라인 each
+```html
+!-- 자바스크립트 인라인 each -->
+<script th:inline="javascript">
+   [# th:each="user, stat : ${users}"]
+   const user[[${stat.count}]] = [[${user}]];
+   [/]
+ </script>
+```
+```html
+<script>
+ const user1 = {"username":"userA","age":10};
+ const user2 = {"username":"userB","age":20};
+ const user3 = {"username":"userC","age":30};
+</script>
+```
+
 ## 템플릿 조각
+웹 페이지를 개발할 때는 공통 영역이 많다.
+이런 부분을 코드를 복사해서 사용한다면 변경시 여러 페이지를 다 수정해야 하므로 상당히 비효율적이다.
+타임리프는 이런 문제를 해결하기 위해 템플릿 조각과 레이아웃 기능을 지원한다.
+
 ## 템플릿 레이아웃
+* `common_header(~{::title},~{::link})` 이 부분이 핵심이다.
+  * `::title`은 현재 페이지의 title 태그들을 전달한다.
+  * `::link`는 현재 페이지의 link 태그들을 전달한다.
+
+`layoutFile.html`을 보면 기본 레이아웃을 가지고 있는데
+`<html>`에 `th:replace`를 사용해서 변경하는 것을 확인할 수 있다.
+결국 `layoutFile.html`에 필요한 내용을 전달하면서 `<html>` 자체를 `layoutFile.html`로 변경한다.
